@@ -4,7 +4,7 @@ from io import BytesIO
 
 st.set_page_config(page_title="Tienda Natural", layout="wide")
 
-# --- CONFIG ---
+# --- CONFIG --- 
 PASSWORD = "mipassword123"
 MAX_PRODUCTOS = 20
 
@@ -22,8 +22,10 @@ if modo == "Admin 🔐":
     if clave == PASSWORD:
         st.success("🔓 Acceso concedido")
 
-        st.markdown("Ingresá hasta 20 productos con nombre, descripción, precio y un link a una imagen (de Imgur, Google Drive, etc.):")
+        st.markdown("Ingresá hasta 20 productos con nombre, descripción, precio y un link a una imagen pública (de Imgur, Google Drive, etc.):")
         productos = []
+        
+        # Crear productos
         for i in range(MAX_PRODUCTOS):
             with st.expander(f"Producto {i + 1}", expanded=False):
                 nombre = st.text_input("Nombre del producto", key=f"nombre_{i}")
@@ -32,7 +34,10 @@ if modo == "Admin 🔐":
                 imagen_url = st.text_input("Link de imagen pública (Imgur, Drive)", key=f"imagen_url_{i}")
                 
                 if imagen_url:
-                    st.image(image, use_column_width=True)
+                    try:
+                        st.image(imagen_url, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Error al cargar la imagen: {e}")
                 
                 if nombre and precio and imagen_url:
                     productos.append({
@@ -64,7 +69,7 @@ elif modo == "Cliente":
                 if idx < len(productos):
                     with cols[j]:
                         producto = productos[idx]
-                        st.image(producto["imagen"], use_column_width=True, caption=producto["nombre"])
+                        st.image(producto["imagen"], use_container_width=True, caption=producto["nombre"])
                         st.markdown(
                             f"<div style='margin-bottom: 10px; font-size: 14px; color: #444'>{producto['descripcion']}</div>",
                             unsafe_allow_html=True
@@ -109,5 +114,6 @@ elif modo == "Cliente":
 
             st.success("✅ ¡Pedido generado!")
             st.download_button("📥 Descargar pedido en Excel", data=output.getvalue(), file_name="pedido.xlsx")
+
 
 
