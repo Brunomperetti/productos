@@ -38,7 +38,6 @@ if modo == "Admin 🔐":
             precio_actual = datos_actuales.get("precio", 0.0)
             imagen_actual = datos_actuales.get("imagen", "") # Esta será la URL ya procesada o la original si no es de GDrive
 
-
             with st.expander(f"Producto {i + 1}", expanded= (nombre_actual !="") ): # Expandir si ya tiene nombre
                 nombre = st.text_input("Nombre del producto", value=nombre_actual, key=f"nombre_{i}")
                 descripcion = st.text_area("Descripción del producto", value=descripcion_actual, key=f"descripcion_{i}", height=100)
@@ -206,6 +205,7 @@ elif modo == "Cliente":
                      st.warning("⚠️ Por favor, ingresa tu nombre y email para generar el archivo.")
         else:
              st.info("Selecciona la cantidad de los productos que deseas comprar.")
+
 
 
 
