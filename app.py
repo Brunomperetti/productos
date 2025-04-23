@@ -32,7 +32,7 @@ if modo == "Admin 🔐":
                 imagen_url = st.text_input("Link de imagen pública (Imgur, Drive)", key=f"imagen_url_{i}")
                 
                 if imagen_url:
-                    st.image(image, use_container_width=True)
+                    st.image(image, use_column_width=True)
                 
                 if nombre and precio and imagen_url:
                     productos.append({
