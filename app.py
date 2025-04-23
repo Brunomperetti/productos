@@ -32,11 +32,11 @@ if modo == "Admin 🔐":
                 imagen_url = st.text_input("Link de imagen pública (Imgur, Drive)", key=f"imagen_url_{i}")
                 
                 if imagen_url:
-                    # Verifica si el enlace de Google Drive es válido
+                    # Reemplazar el link de Google Drive para que sea compatible con Streamlit
                     if 'drive.google.com' in imagen_url:
-                        imagen_url = imagen_url.replace("view?usp=sharing", "uc?export=view")
-                    st.image(imagen_url, use_container_width=True)  # Aquí se muestra la imagen
-
+                        imagen_url = imagen_url.replace('file/d/', 'uc?export=view&id=').split('?')[0]
+                    st.image(imagen_url, use_container_width=True)  # Cambio de use_column_width a use_container_width
+                
                 if nombre and precio and imagen_url:
                     productos.append({
                         "nombre": nombre,
@@ -67,7 +67,7 @@ elif modo == "Cliente":
                 if idx < len(productos):
                     with cols[j]:
                         producto = productos[idx]
-                        st.image(producto["imagen"], use_column_width=True, caption=producto["nombre"])
+                        st.image(producto["imagen"], use_container_width=True, caption=producto["nombre"])  # Cambio de use_column_width a use_container_width
                         st.markdown(
                             f"<div style='margin-bottom: 10px; font-size: 14px; color: #444'>{producto['descripcion']}</div>",
                             unsafe_allow_html=True
@@ -112,6 +112,7 @@ elif modo == "Cliente":
 
             st.success("✅ ¡Pedido generado!")
             st.download_button("📥 Descargar pedido en Excel", data=output.getvalue(), file_name="pedido.xlsx")
+
 
 
 
