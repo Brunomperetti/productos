@@ -2,15 +2,20 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 import re
-import json # Importar la librería para trabajar con JSON
-import os # Importar para verificar si el archivo existe
+import json
+import os
+import urllib.parse # Importar para codificar texto para URL
 
-st.set_page_config(page_title="Productos para Mascotas", layout="wide")
+st.set_page_config(page_title="Tienda Natural", layout="wide")
 
 # --- CONFIG ---
 PASSWORD = "mipassword123" # Considera usar st.secrets para más seguridad si despliegas la app
 MAX_PRODUCTOS = 20
 PRODUCTOS_FILE = "productos.json" # Nombre del archivo donde guardaremos los productos
+# --- NUEVO: Número de WhatsApp para pedidos ---
+WHATSAPP_PHONE_NUMBER = "5493516507867" # Reemplaza con el número de WhatsApp (incluye código de país sin el signo +)
+# Ejemplo para Argentina: 5491112345678 (54 país, 9 para indicar móvil, 11 código de área, resto el número)
+
 
 # --- Funciones para cargar y guardar productos ---
 def cargar_productos(filename=PRODUCTOS_FILE):
@@ -20,8 +25,7 @@ def cargar_productos(filename=PRODUCTOS_FILE):
             try:
                 return json.load(f)
             except json.JSONDecodeError:
-                # Manejar el caso de que el archivo esté vacío o mal formateado
-                return []
+                return [] # Devuelve una lista vacía si el archivo está vacío o mal formateado
     return [] # Devuelve una lista vacía si el archivo no existe
 
 def guardar_productos(productos, filename=PRODUCTOS_FILE):
@@ -30,11 +34,10 @@ def guardar_productos(productos, filename=PRODUCTOS_FILE):
         json.dump(productos, f, indent=4, ensure_ascii=False)
 
 # --- SESSION STATE ---
-# Intentar cargar productos del archivo al inicio de la aplicación/sesión
 if 'productos' not in st.session_state:
     st.session_state.productos = cargar_productos()
 
-st.title("🛍️ Novedades Millex")
+st.title("🛍️ COTIZADOR NEWRBAN")
 
 # --- Modo de uso ---
 modo = st.radio("Seleccioná el modo de acceso:", ["Cliente", "Admin 🔐"], horizontal=True)
@@ -46,28 +49,22 @@ if modo == "Admin 🔐":
 
         st.markdown("Ingresá hasta 20 productos con nombre, descripción, precio y un link a una imagen pública (de Imgur, Google Drive, etc.):")
 
-        # Usaremos una lista temporal para recolectar los productos en esta sesión de edición
         productos_editados = []
-        # Cargamos los productos existentes directamente del session_state (que ya se llenó desde el archivo)
-        productos_actuales = st.session_state.productos[:] # Copia para no modificar el state directamente aún
+        productos_actuales = st.session_state.productos[:]
 
-        # Asegurarse de tener suficientes slots si hay menos de MAX_PRODUCTOS guardados
-        for i in range(max(MAX_PRODUCTOS, len(productos_actuales) + 1)): # Mostrar al menos un slot vacío si hay productos
-            # Pre-llenar con datos existentes si el índice es válido
+        for i in range(max(MAX_PRODUCTOS, len(productos_actuales) + 1)):
             datos_actuales = productos_actuales[i] if i < len(productos_actuales) else {}
             nombre_actual = datos_actuales.get("nombre", "")
             descripcion_actual = datos_actuales.get("descripcion", "")
             precio_actual = datos_actuales.get("precio", 0.0)
             imagen_actual = datos_actuales.get("imagen", "")
 
-            # Solo mostrar expander si hay datos o es el primer slot vacío
-            if i < len(productos_actuales) or i == len(productos_actuales): # Mostrar slots existentes y el siguiente vacío
-                 with st.expander(f"Producto {i + 1}", expanded= (nombre_actual !="") or i == len(productos_actuales) ): # Expandir si ya tiene nombre o es el primer slot vacío
+            if i < len(productos_actuales) or i == len(productos_actuales):
+                 with st.expander(f"Producto {i + 1}", expanded= (nombre_actual !="") or i == len(productos_actuales) ):
                     nombre = st.text_input("Nombre del producto", value=nombre_actual, key=f"nombre_{i}")
                     descripcion = st.text_area("Descripción del producto", value=descripcion_actual, key=f"descripcion_{i}", height=100)
                     precio = st.number_input("Precio ($)", value=precio_actual, min_value=0.0, step=0.1, key=f"precio_{i}")
 
-                    # --- INICIO: MODIFICACIÓN MANEJO DE IMAGEN ---
                     imagen_url_input = st.text_input(
                         "Link de imagen pública (Imgur, Drive)",
                         value=imagen_actual,
@@ -92,32 +89,23 @@ if modo == "Admin 🔐":
                         except Exception as e:
                             st.error(f"No se pudo cargar la previsualización. Verifica el link y los permisos ('Cualquier persona con el enlace'). Error: {e}", icon="🖼️")
 
-                    # Añadir a la lista si tiene los datos básicos (nombre, precio > 0, y una URL de imagen ingresada)
                     if nombre and precio > 0 and imagen_url_input:
                         productos_editados.append({
                             "nombre": nombre,
                             "descripcion": descripcion,
                             "precio": precio,
-                            "imagen": imagen_url_para_mostrar # Guardar la URL que se usa para mostrar
+                            "imagen": imagen_url_para_mostrar
                         })
                     elif nombre or descripcion or precio > 0 or imagen_url_input:
-                         pass # Ignorar si hay campos incompletos pero algo se ingresó
-                    # --- FIN: MODIFICACIÓN MANEJO DE IMAGEN ---
+                         pass
 
-        # Solo mostrar el botón Guardar si hay al menos un producto editado con datos
         if productos_editados:
             if st.button("💾 Guardar Cambios"):
-                # Filtrar productos vacíos (si el admin borró todos los datos de un slot que antes tenía)
                 productos_finales = [p for p in productos_editados if p["nombre"] and p["precio"] > 0 and p["imagen"]]
-
-                # --- Paso crucial: Guardar los productos en el archivo ---
                 guardar_productos(productos_finales)
-
-                # Actualizar el session state con los productos guardados para reflejar en la vista actual del admin
                 st.session_state.productos = productos_finales
-
                 st.success(f"✅ ¡{len(productos_finales)} Productos guardados para los clientes!")
-                st.rerun() # Refrescar para que el modo cliente cargue desde el archivo actualizado
+                st.rerun()
 
     elif clave != "" :
         st.error("🔑 Clave incorrecta.")
@@ -127,7 +115,6 @@ if modo == "Admin 🔐":
 
 # --- MODO CLIENTE ---
 elif modo == "Cliente":
-    # El session_state.productos ya contiene los productos cargados desde el archivo al inicio
     if not st.session_state.productos:
         st.info("Todavía no hay productos cargados. Vuelve más tarde.")
     else:
@@ -137,7 +124,6 @@ elif modo == "Cliente":
         column_count = 3
         columns = st.columns(column_count)
 
-        # Usar enumerate con el rango de productos_disponibles
         for idx, producto in enumerate(productos_disponibles):
              col = columns[idx % column_count]
              with col:
@@ -163,54 +149,56 @@ elif modo == "Cliente":
         if cantidades:
              st.markdown("### 🛒 Tu Pedido:")
              total = 0
+             pedido_texto = "¡Hola! Quiero hacer el siguiente pedido:\n\n" # Inicio del mensaje para WhatsApp
              pedido_items = []
              for idx, cant in cantidades.items():
                   producto = productos_disponibles[idx]
                   subtotal = cant * producto["precio"]
                   total += subtotal
-                  pedido_items.append(f"- {cant} x {producto['nombre']} (${producto['precio']:.2f} c/u) = ${subtotal:.2f}")
+                  item_linea = f"- {cant} x {producto['nombre']} (${producto['precio']:.2f} c/u) = ${subtotal:.2f}"
+                  pedido_items.append(item_linea)
+                  pedido_texto += item_linea + "\n" # Añadir al texto de WhatsApp
 
              st.markdown("\n".join(pedido_items))
              st.markdown(f"**Total del Pedido: ${total:.2f}**")
              st.markdown("---")
 
-             st.markdown("### 🧾 Tus datos para generar el Excel:")
+             st.markdown("### 🧾 Tus datos para el pedido:")
              nombre_cliente = st.text_input("🧍 Tu nombre")
              email_cliente = st.text_input("📧 Tu email")
 
-             if st.button("✅ Generar Excel del Pedido"):
-                  if nombre_cliente and email_cliente:
-                      data = []
-                      total_final = 0
-                      for idx, cant in cantidades.items():
-                           producto = productos_disponibles[idx]
-                           subtotal = cant * producto["precio"]
-                           total_final += subtotal
-                           data.append({
-                               "Producto": producto["nombre"],
-                               "Descripción": producto["descripcion"],
-                               "Precio Unitario": f"${producto['precio']:.2f}",
-                               "Cantidad": cant,
-                               "Subtotal": f"${subtotal:.2f}"
-                           })
+             # Añadir datos del cliente al texto de WhatsApp si se ingresaron
+             if nombre_cliente:
+                 pedido_texto += f"\nDatos del cliente:\nNombre: {nombre_cliente}"
+             if email_cliente:
+                 pedido_texto += f"\nEmail: {email_cliente}"
 
-                      df = pd.DataFrame(data)
-                      df.loc[len(df.index)] = ["", "", "", "TOTAL", f"${total_final:.2f}"]
+             # --- NUEVO: Botón de enviar a WhatsApp ---
+             if st.button("📲 Enviar Pedido por WhatsApp"):
+                 if nombre_cliente and email_cliente: # Opcional: validar que ingresó nombre y email antes de enviar
+                     # Codificar el texto del pedido para la URL de WhatsApp
+                     mensaje_codificado = urllib.parse.quote(pedido_texto)
 
-                      output = BytesIO()
-                      with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                           df.to_excel(writer, index=False, sheet_name="Pedido")
-                           pd.DataFrame({"Cliente": [nombre_cliente], "Email": [email_cliente]}).to_excel(writer, index=False, sheet_name="Datos Cliente")
+                     # Construir el enlace de WhatsApp
+                     whatsapp_url = f"https://wa.me/{WHATSAPP_PHONE_NUMBER}?text={mensaje_codificado}"
 
-                      st.success("✅ ¡Archivo Excel generado!")
-                      st.download_button(
-                           label="📥 Descargar pedido en Excel",
-                           data=output.getvalue(),
-                           file_name=f"pedido_{nombre_cliente.replace(' ', '_')}.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                      )
-                  else:
-                      st.warning("⚠️ Por favor, ingresa tu nombre y email para generar el archivo.")
+                     # Usar st.link_button para crear el botón que abre el enlace
+                     st.markdown(
+                         f'<a href="{whatsapp_url}" target="_blank" style="display: inline-block; padding: 12px 20px; background-color: #25D366; color: white; text-align: center; text-decoration: none; font-size: 16px; border-radius: 5px; margin-top: 10px;">📲 Enviar Pedido por WhatsApp</a>',
+                         unsafe_allow_html=True
+                     )
+                     st.success("¡Haz clic en el botón de WhatsApp para enviar el pedido!")
+                     st.info("Se abrirá tu aplicación de WhatsApp con el mensaje listo para enviar.")
+
+                 else:
+                     st.warning("⚠️ Por favor, ingresa tu nombre y email para poder generar el mensaje de pedido.")
+
+             # --- ELIMINAR O COMENTAR la sección del botón de Excel ---
+             # if st.button("✅ Generar Excel del Pedido"):
+             #    ... (código anterior para generar Excel) ...
+             # --- FIN ELIMINAR O COMENTAR ---
+
+
         else:
              st.info("Selecciona la cantidad de los productos que deseas comprar.")
 
