@@ -6,7 +6,7 @@ import json
 import os
 import urllib.parse # Importar para codificar texto para URL
 
-st.set_page_config(page_title="Tienda Natural", layout="wide")
+st.set_page_config(page_title="Productos y accesorios para Mascotas", layout="wide")
 
 # --- CONFIG ---
 PASSWORD = "mipassword123" # Considera usar st.secrets para más seguridad si despliegas la app
@@ -37,7 +37,7 @@ def guardar_productos(productos, filename=PRODUCTOS_FILE):
 if 'productos' not in st.session_state:
     st.session_state.productos = cargar_productos()
 
-st.title("🛍️ COTIZADOR NEWRBAN")
+st.title("Promociones Millex")
 
 # --- Modo de uso ---
 modo = st.radio("Seleccioná el modo de acceso:", ["Cliente", "Admin 🔐"], horizontal=True)
