@@ -132,7 +132,8 @@ elif modo == "Cliente":
         for idx, producto in enumerate(productos_disponibles):
             col = columns[idx % column_count]
             with col:
-                st.image(producto["imagen"], use_container_width=True, caption=f"{producto['nombre']} (${producto['precio']:.2f})")
+                # Reducir el tamaño de la imagen a la mitad del ancho del contenedor
+                st.image(producto["imagen"], width=col.width // 2, caption=f"{producto['nombre']} (${producto['precio']:.2f})")
                 st.markdown(f"<p style='font-size: 1.5em; font-weight: bold;'>${producto['precio']:.2f}</p>", unsafe_allow_html=True) # Precio más grande
                 st.markdown(f"<p style='color: #f0f0f0;'>{producto.get('codigo', 'Sin código')}</p>", unsafe_allow_html=True) # Mostrar código
                 with st.expander("Descripción"):
@@ -171,9 +172,9 @@ elif modo == "Cliente":
             st.markdown("---")
 
             st.markdown("### 🧾 Tus datos para el pedido:")
-            razon_social_cliente = st.text_input("🏢 Razón Social") # Nuevo campo
-            cuit_cliente = st.text_input("🇦🇷 CUIT") # Nuevo campo
-            direccion_cliente = st.text_area("📍 Dirección de Entrega") # Nuevo campo
+            razon_social_cliente = st.text_input("🏢 Razón Social")
+            cuit_cliente = st.text_input("🇦🇷 CUIT")
+            direccion_cliente = st.text_area("📍 Dirección de Entrega")
             nombre_cliente = st.text_input("🧍 Nombre de Contacto")
             email_cliente = st.text_input("📧 Email de Contacto")
 
