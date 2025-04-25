@@ -132,8 +132,24 @@ elif modo == "Cliente":
         for idx, producto in enumerate(productos_disponibles):
             col = columns[idx % column_count]
             with col:
-                # Reducir el tamaño de la imagen a la mitad del ancho del contenedor
-                st.image(producto["imagen"], width=int(col.width * 0.5), caption=f"{producto['nombre']} (${producto['precio']:.2f})")
+                # Inyectar CSS para controlar el tamaño de la imagen
+                st.markdown(
+                    f"""
+                    <style>
+                    .producto-imagen-{idx} {{
+                        width: 50%;
+                        max-width: 150px; /* Ajusta este valor máximo si es necesario */
+                        height: auto;
+                    }}
+                    </style>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f'<img src="{producto["imagen"]}" class="producto-imagen-{idx}">',
+                    unsafe_allow_html=True,
+                )
+                st.caption(f"{producto['nombre']} (${producto['precio']:.2f})")
                 st.markdown(f"<p style='font-size: 1.5em; font-weight: bold;'>${producto['precio']:.2f}</p>", unsafe_allow_html=True) # Precio más grande
                 st.markdown(f"<p style='color: #f0f0f0;'>{producto.get('codigo', 'Sin código')}</p>", unsafe_allow_html=True) # Mostrar código
                 with st.expander("Descripción"):
