@@ -49,7 +49,7 @@ if modo == "Admin 🔐":
     if clave == PASSWORD:
         st.success("🔓 Acceso concedido")
 
-        st.markdown("Ingresá hasta 20 productos con nombre, descripción, precio y un link a una imagen pública (de Imgur, Google Drive, etc.):")
+        st.markdown("Ingresá hasta 20 productos con nombre, descripción, precio, código y un link a una imagen pública (de Imgur, Google Drive, etc.):")
 
         productos_editados = []
         productos_actuales = st.session_state.productos[:]
@@ -60,12 +60,14 @@ if modo == "Admin 🔐":
             descripcion_actual = datos_actuales.get("descripcion", "")
             precio_actual = datos_actuales.get("precio", 0.0)
             imagen_actual = datos_actuales.get("imagen", "")
+            codigo_actual = datos_actuales.get("codigo", "") # Nuevo campo
 
             if i < len(productos_actuales) or i == len(productos_actuales):
                 with st.expander(f"Producto {i + 1}", expanded= (nombre_actual !="") or i == len(productos_actuales) ):
                     nombre = st.text_input("Nombre del producto", value=nombre_actual, key=f"nombre_{i}")
                     descripcion = st.text_area("Descripción del producto", value=descripcion_actual, key=f"descripcion_{i}", height=100)
                     precio = st.number_input("Precio ($)", value=precio_actual, min_value=0.0, step=0.1, key=f"precio_{i}")
+                    codigo = st.text_input("Código del producto", value=codigo_actual, key=f"codigo_{i}") # Nuevo campo
 
                     imagen_url_input = st.text_input(
                         "Link de imagen pública (Imgur, Drive)",
@@ -91,19 +93,20 @@ if modo == "Admin 🔐":
                         except Exception as e:
                             st.error(f"No se pudo cargar la previsualización. Verifica el link y los permisos ('Cualquier persona con el enlace'). Error: {e}", icon="🖼️")
 
-                    if nombre and precio > 0 and imagen_url_input:
+                    if nombre and precio > 0 and imagen_url_input and codigo: # Requerir código
                         productos_editados.append({
                             "nombre": nombre,
                             "descripcion": descripcion,
                             "precio": precio,
-                            "imagen": imagen_url_para_mostrar
+                            "imagen": imagen_url_para_mostrar,
+                            "codigo": codigo # Guardar código
                         })
-                    elif nombre or descripcion or precio > 0 or imagen_url_input:
+                    elif nombre or descripcion or precio > 0 or imagen_url_input or codigo:
                         pass
 
         if productos_editados:
             if st.button("💾 Guardar Cambios"):
-                productos_finales = [p for p in productos_editados if p["nombre"] and p["precio"] > 0 and p["imagen"]]
+                productos_finales = [p for p in productos_editados if p["nombre"] and p["precio"] > 0 and p["imagen"] and p["codigo"]] # Requerir código al guardar
                 guardar_productos(productos_finales)
                 st.session_state.productos = productos_finales
                 st.success(f"✅ ¡{len(productos_finales)} Productos guardados para los clientes!")
@@ -130,9 +133,11 @@ elif modo == "Cliente":
             col = columns[idx % column_count]
             with col:
                 st.image(producto["imagen"], use_container_width=True, caption=f"{producto['nombre']} (${producto['precio']:.2f})")
+                st.markdown(f"<p style='font-size: 1.5em; font-weight: bold;'>${producto['precio']:.2f}</p>", unsafe_allow_html=True) # Precio más grande
+                st.markdown(f"<p style='color: #f0f0f0;'>{producto.get('codigo', 'Sin código')}</p>", unsafe_allow_html=True) # Mostrar código
                 with st.expander("Descripción"):
                     st.markdown(
-                        f"<div style='font-size: 14px; color: #444'>{producto['descripcion']}</div>",
+                        f"<div style='font-size: 14px; color: #f0f0f0;'>{producto['descripcion']}</div>", # Descripción más clara
                         unsafe_allow_html=True
                     )
 
@@ -157,7 +162,7 @@ elif modo == "Cliente":
                 producto = productos_disponibles[idx]
                 subtotal = cant * producto["precio"]
                 total += subtotal
-                item_linea = f"- {cant} x {producto['nombre']} (${producto['precio']:.2f} c/u) = ${subtotal:.2f}"
+                item_linea = f"- {cant} x {producto['nombre']} (Código: {producto.get('codigo', 'N/A')}) = ${subtotal:.2f}"
                 pedido_items.append(item_linea)
                 pedido_texto += item_linea + "\n" # Añadir al texto de WhatsApp
 
@@ -166,18 +171,27 @@ elif modo == "Cliente":
             st.markdown("---")
 
             st.markdown("### 🧾 Tus datos para el pedido:")
-            nombre_cliente = st.text_input("🧍 Tu nombre")
-            email_cliente = st.text_input("📧 Tu email")
+            razon_social_cliente = st.text_input("🏢 Razón Social") # Nuevo campo
+            cuit_cliente = st.text_input("🇦🇷 CUIT") # Nuevo campo
+            direccion_cliente = st.text_area("📍 Dirección de Entrega") # Nuevo campo
+            nombre_cliente = st.text_input("🧍 Nombre de Contacto")
+            email_cliente = st.text_input("📧 Email de Contacto")
 
             # Añadir datos del cliente al texto de WhatsApp si se ingresaron
+            if razon_social_cliente:
+                pedido_texto += f"\nRazón Social: {razon_social_cliente}"
+            if cuit_cliente:
+                pedido_texto += f"\nCUIT: {cuit_cliente}"
+            if direccion_cliente:
+                pedido_texto += f"\nDirección de Entrega: {direccion_cliente}"
             if nombre_cliente:
-                pedido_texto += f"\nDatos del cliente:\nNombre: {nombre_cliente}"
+                pedido_texto += f"\nNombre de Contacto: {nombre_cliente}"
             if email_cliente:
-                pedido_texto += f"\nEmail: {email_cliente}"
+                pedido_texto += f"\nEmail de Contacto: {email_cliente}"
 
             # --- NUEVO: Botón de enviar a WhatsApp ---
             if st.button("📲 Enviar Pedido por WhatsApp"):
-                if nombre_cliente and email_cliente: # Opcional: validar que ingresó nombre y email antes de enviar
+                if nombre_cliente and email_cliente: # Opcional: validar campos requeridos
                     # Codificar el texto del pedido para la URL de WhatsApp
                     mensaje_codificado = urllib.parse.quote(pedido_texto)
 
@@ -193,7 +207,7 @@ elif modo == "Cliente":
                     st.info("Se abrirá tu aplicación de WhatsApp con el mensaje listo para enviar.")
 
                 else:
-                    st.warning("⚠️ Por favor, ingresa tu nombre y email para poder generar el mensaje de pedido.")
+                    st.warning("⚠️ Por favor, ingresa al menos tu nombre y email para poder generar el mensaje de pedido.")
 
             # --- ELIMINAR O COMENTAR la sección del botón de Excel ---
             # if st.button("✅ Generar Excel del Pedido"):
@@ -203,7 +217,6 @@ elif modo == "Cliente":
 
         else:
             st.info("Selecciona la cantidad de los productos que deseas comprar.")
-
 
 
 
