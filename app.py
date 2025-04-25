@@ -36,6 +36,8 @@ def guardar_productos(productos, filename=PRODUCTOS_FILE):
 # --- SESSION STATE ---
 if 'productos' not in st.session_state:
     st.session_state.productos = cargar_productos()
+elif not st.session_state.productos: # Añadimos esta condición para recargar si está vacío
+    st.session_state.productos = cargar_productos()
 
 st.title("Promociones Millex")
 
@@ -60,7 +62,7 @@ if modo == "Admin 🔐":
             imagen_actual = datos_actuales.get("imagen", "")
 
             if i < len(productos_actuales) or i == len(productos_actuales):
-                 with st.expander(f"Producto {i + 1}", expanded= (nombre_actual !="") or i == len(productos_actuales) ):
+                with st.expander(f"Producto {i + 1}", expanded= (nombre_actual !="") or i == len(productos_actuales) ):
                     nombre = st.text_input("Nombre del producto", value=nombre_actual, key=f"nombre_{i}")
                     descripcion = st.text_area("Descripción del producto", value=descripcion_actual, key=f"descripcion_{i}", height=100)
                     precio = st.number_input("Precio ($)", value=precio_actual, min_value=0.0, step=0.1, key=f"precio_{i}")
@@ -81,7 +83,7 @@ if modo == "Admin 🔐":
                                 imagen_url_para_mostrar = f'https://drive.google.com/uc?export=view&id={file_id}'
                             else:
                                 if 'uc?id=' not in imagen_url_input and 'uc?export=view&id=' not in imagen_url_input:
-                                     st.warning(f"Formato del link de Google Drive no reconocido para transformar ({imagen_url_input}). Se usará como está. Verifica los permisos.", icon="⚠️")
+                                    st.warning(f"Formato del link de Google Drive no reconocido para transformar ({imagen_url_input}). Se usará como está. Verifica los permisos.", icon="⚠️")
                                 imagen_url_para_mostrar = imagen_url_input
 
                         try:
@@ -97,7 +99,7 @@ if modo == "Admin 🔐":
                             "imagen": imagen_url_para_mostrar
                         })
                     elif nombre or descripcion or precio > 0 or imagen_url_input:
-                         pass
+                        pass
 
         if productos_editados:
             if st.button("💾 Guardar Cambios"):
@@ -125,83 +127,82 @@ elif modo == "Cliente":
         columns = st.columns(column_count)
 
         for idx, producto in enumerate(productos_disponibles):
-             col = columns[idx % column_count]
-             with col:
-                 st.image(producto["imagen"], use_container_width=True, caption=f"{producto['nombre']} (${producto['precio']:.2f})")
-                 with st.expander("Descripción"):
-                     st.markdown(
-                         f"<div style='font-size: 14px; color: #444'>{producto['descripcion']}</div>",
-                         unsafe_allow_html=True
-                     )
+            col = columns[idx % column_count]
+            with col:
+                st.image(producto["imagen"], use_container_width=True, caption=f"{producto['nombre']} (${producto['precio']:.2f})")
+                with st.expander("Descripción"):
+                    st.markdown(
+                        f"<div style='font-size: 14px; color: #444'>{producto['descripcion']}</div>",
+                        unsafe_allow_html=True
+                    )
 
-                 cantidad = st.number_input(
-                     f"Cantidad",
-                     min_value=0,
-                     step=1,
-                     key=f"cantidad_cliente_{idx}",
-                     value=0
-                 )
-                 if cantidad > 0:
-                     cantidades[idx] = cantidad
+                cantidad = st.number_input(
+                    f"Cantidad",
+                    min_value=0,
+                    step=1,
+                    key=f"cantidad_cliente_{idx}",
+                    value=0
+                )
+                if cantidad > 0:
+                    cantidades[idx] = cantidad
 
         st.markdown("---")
 
         if cantidades:
-             st.markdown("### 🛒 Tu Pedido:")
-             total = 0
-             pedido_texto = "¡Hola! Quiero hacer el siguiente pedido:\n\n" # Inicio del mensaje para WhatsApp
-             pedido_items = []
-             for idx, cant in cantidades.items():
-                  producto = productos_disponibles[idx]
-                  subtotal = cant * producto["precio"]
-                  total += subtotal
-                  item_linea = f"- {cant} x {producto['nombre']} (${producto['precio']:.2f} c/u) = ${subtotal:.2f}"
-                  pedido_items.append(item_linea)
-                  pedido_texto += item_linea + "\n" # Añadir al texto de WhatsApp
+            st.markdown("### 🛒 Tu Pedido:")
+            total = 0
+            pedido_texto = "¡Hola! Quiero hacer el siguiente pedido:\n\n" # Inicio del mensaje para WhatsApp
+            pedido_items = []
+            for idx, cant in cantidades.items():
+                producto = productos_disponibles[idx]
+                subtotal = cant * producto["precio"]
+                total += subtotal
+                item_linea = f"- {cant} x {producto['nombre']} (${producto['precio']:.2f} c/u) = ${subtotal:.2f}"
+                pedido_items.append(item_linea)
+                pedido_texto += item_linea + "\n" # Añadir al texto de WhatsApp
 
-             st.markdown("\n".join(pedido_items))
-             st.markdown(f"**Total del Pedido: ${total:.2f}**")
-             st.markdown("---")
+            st.markdown("\n".join(pedido_items))
+            st.markdown(f"**Total del Pedido: ${total:.2f}**")
+            st.markdown("---")
 
-             st.markdown("### 🧾 Tus datos para el pedido:")
-             nombre_cliente = st.text_input("🧍 Tu nombre")
-             email_cliente = st.text_input("📧 Tu email")
+            st.markdown("### 🧾 Tus datos para el pedido:")
+            nombre_cliente = st.text_input("🧍 Tu nombre")
+            email_cliente = st.text_input("📧 Tu email")
 
-             # Añadir datos del cliente al texto de WhatsApp si se ingresaron
-             if nombre_cliente:
-                 pedido_texto += f"\nDatos del cliente:\nNombre: {nombre_cliente}"
-             if email_cliente:
-                 pedido_texto += f"\nEmail: {email_cliente}"
+            # Añadir datos del cliente al texto de WhatsApp si se ingresaron
+            if nombre_cliente:
+                pedido_texto += f"\nDatos del cliente:\nNombre: {nombre_cliente}"
+            if email_cliente:
+                pedido_texto += f"\nEmail: {email_cliente}"
 
-             # --- NUEVO: Botón de enviar a WhatsApp ---
-             if st.button("📲 Enviar Pedido por WhatsApp"):
-                 if nombre_cliente and email_cliente: # Opcional: validar que ingresó nombre y email antes de enviar
-                     # Codificar el texto del pedido para la URL de WhatsApp
-                     mensaje_codificado = urllib.parse.quote(pedido_texto)
+            # --- NUEVO: Botón de enviar a WhatsApp ---
+            if st.button("📲 Enviar Pedido por WhatsApp"):
+                if nombre_cliente and email_cliente: # Opcional: validar que ingresó nombre y email antes de enviar
+                    # Codificar el texto del pedido para la URL de WhatsApp
+                    mensaje_codificado = urllib.parse.quote(pedido_texto)
 
-                     # Construir el enlace de WhatsApp
-                     whatsapp_url = f"https://wa.me/{WHATSAPP_PHONE_NUMBER}?text={mensaje_codificado}"
+                    # Construir el enlace de WhatsApp
+                    whatsapp_url = f"https://wa.me/{WHATSAPP_PHONE_NUMBER}?text={mensaje_codificado}"
 
-                     # Usar st.link_button para crear el botón que abre el enlace
-                     st.markdown(
-                         f'<a href="{whatsapp_url}" target="_blank" style="display: inline-block; padding: 12px 20px; background-color: #25D366; color: white; text-align: center; text-decoration: none; font-size: 16px; border-radius: 5px; margin-top: 10px;">📲 Enviar Pedido por WhatsApp</a>',
-                         unsafe_allow_html=True
-                     )
-                     st.success("¡Haz clic en el botón de WhatsApp para enviar el pedido!")
-                     st.info("Se abrirá tu aplicación de WhatsApp con el mensaje listo para enviar.")
+                    # Usar st.link_button para crear el botón que abre el enlace
+                    st.markdown(
+                        f'<a href="{whatsapp_url}" target="_blank" style="display: inline-block; padding: 12px 20px; background-color: #25D366; color: white; text-align: center; text-decoration: none; font-size: 16px; border-radius: 5px; margin-top: 10px;">📲 Enviar Pedido por WhatsApp</a>',
+                        unsafe_allow_html=True
+                    )
+                    st.success("¡Haz clic en el botón de WhatsApp para enviar el pedido!")
+                    st.info("Se abrirá tu aplicación de WhatsApp con el mensaje listo para enviar.")
 
-                 else:
-                     st.warning("⚠️ Por favor, ingresa tu nombre y email para poder generar el mensaje de pedido.")
+                else:
+                    st.warning("⚠️ Por favor, ingresa tu nombre y email para poder generar el mensaje de pedido.")
 
-             # --- ELIMINAR O COMENTAR la sección del botón de Excel ---
-             # if st.button("✅ Generar Excel del Pedido"):
-             #    ... (código anterior para generar Excel) ...
-             # --- FIN ELIMINAR O COMENTAR ---
+            # --- ELIMINAR O COMENTAR la sección del botón de Excel ---
+            # if st.button("✅ Generar Excel del Pedido"):
+            #     ... (código anterior para generar Excel) ...
+            # --- FIN ELIMINAR O COMENTAR ---
 
 
         else:
-             st.info("Selecciona la cantidad de los productos que deseas comprar.")
-
+            st.info("Selecciona la cantidad de los productos que deseas comprar.")
 
 
 
