@@ -10,7 +10,7 @@ st.set_page_config(page_title="Productos y accesorios para Mascotas", layout="wi
 
 # --- CONFIG ---
 PASSWORD = "mipassword123" # Considera usar st.secrets para más seguridad si despliegas la app
-MAX_PRODUCTOS = 20
+MAX_PRODUCTOS = 200
 PRODUCTOS_FILE = "productos.json" # Nombre del archivo donde guardaremos los productos
 # --- NUEVO: Número de WhatsApp para pedidos ---
 WHATSAPP_PHONE_NUMBER = "5493516507867" # Reemplaza con el número de WhatsApp (incluye código de país sin el signo +)
@@ -20,24 +20,33 @@ WHATSAPP_PHONE_NUMBER = "5493516507867" # Reemplaza con el número de WhatsApp (
 # --- Funciones para cargar y guardar productos ---
 def cargar_productos(filename=PRODUCTOS_FILE):
     """Carga los productos desde un archivo JSON."""
+    st.info("🔄 Intentando cargar productos...") # Indicador de carga
     if os.path.exists(filename):
         with open(filename, "r", encoding='utf-8') as f:
             try:
-                return json.load(f)
+                productos = json.load(f)
+                st.success(f"✅ Se cargaron {len(productos)} productos.") # Éxito de carga
+                return productos
             except json.JSONDecodeError:
+                st.warning("⚠️ Error al decodificar el archivo de productos. Se iniciará con una lista vacía.")
                 return [] # Devuelve una lista vacía si el archivo está vacío o mal formateado
-    return [] # Devuelve una lista vacía si el archivo no existe
+    else:
+        st.info("ℹ️ El archivo de productos no existe. Se iniciará con una lista vacía.") # Archivo no encontrado
+        return [] # Devuelve una lista vacía si el archivo no existe
 
 def guardar_productos(productos, filename=PRODUCTOS_FILE):
     """Guarda la lista de productos en un archivo JSON."""
     with open(filename, "w", encoding='utf-8') as f:
         json.dump(productos, f, indent=4, ensure_ascii=False)
+        st.success(f"💾 Se guardaron {len(productos)} productos exitosamente.") # Confirmación de guardado
 
 # --- SESSION STATE ---
 if 'productos' not in st.session_state:
     st.session_state.productos = cargar_productos()
 elif not st.session_state.productos: # Añadimos esta condición para recargar si está vacío
     st.session_state.productos = cargar_productos()
+else:
+    st.info(f"✨ Ya hay {len(st.session_state.productos)} productos en la sesión.") # Indica si ya hay productos en la sesión
 
 st.title("Promociones Millex")
 
@@ -49,7 +58,7 @@ if modo == "Admin 🔐":
     if clave == PASSWORD:
         st.success("🔓 Acceso concedido")
 
-        st.markdown("Ingresá hasta 20 productos con nombre, descripción, precio, código y un link a una imagen pública (de Imgur, Google Drive, etc.):")
+        st.markdown(f"Ingresá hasta {MAX_PRODUCTOS} productos con nombre, descripción, precio, código y un link a una imagen pública (de Imgur, Google Drive, etc.):")
 
         productos_editados = []
         productos_actuales = st.session_state.productos[:]
